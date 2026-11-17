@@ -190,18 +190,12 @@ public sealed class Ue4ssInstaller(IFileVersionReader? versions = null)
         {
             toDelete.AddRange(m.Files.Where(f => !IsUserData(f)));
         }
-        else if (status.Layout == Ue4ssLayout.Folder)
-        {
-            // Unknown install: everything in ue4ss\ except mods and settings belongs to the loader.
-            foreach (var f in Directory.EnumerateFiles(ue4ssDir, "*", SearchOption.AllDirectories))
-            {
-                var rel = Path.GetRelativePath(win64, f).Replace('\\', '/');
-                if (!IsUserData(rel)) toDelete.Add(rel);
-            }
-        }
         else
         {
-            toDelete.AddRange(CoreFiles);
+            // Installed by hand: only remove the loader itself. Other files in the folder (game-specific
+            // UE4SS_Signatures, MemberVariableLayout.ini, VTableLayout.ini...) may be needed and are left alone;
+            // an update overwrites the ones the new package ships.
+            toDelete.AddRange(CoreFiles.Select(f => (ue4ssRel.Length == 0 ? "" : ue4ssRel + "/") + f));
         }
         if (status.ProxyDll is not null) toDelete.Add(status.ProxyDll);
         toDelete.Add((ue4ssRel.Length == 0 ? "" : ue4ssRel + "/") + "UE4SS.log");

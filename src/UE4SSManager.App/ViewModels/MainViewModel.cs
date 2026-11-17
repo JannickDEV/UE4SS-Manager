@@ -309,7 +309,17 @@ public sealed partial class MainViewModel : ObservableObject
     [ObservableProperty] private double _progress;
     [ObservableProperty] private bool _progressIndeterminate;
 
-    private void AddLog(string line) => Log.Add($"[{DateTime.Now:HH:mm:ss}] {line}");
+    /// <summary>Safe to call from any thread: the log list is bound to the UI, so changes always go through the dispatcher.</summary>
+    private void AddLog(string line)
+    {
+        var text = $"[{DateTime.Now:HH:mm:ss}] {line}";
+        var dispatcher = Application.Current?.Dispatcher;
+        if (dispatcher is null || dispatcher.CheckAccess()) Log.Add(text);
+        else dispatcher.BeginInvoke(() => Log.Add(text));
+    }
+
+    /// <summary>Created on the UI thread so its callbacks are posted back to it.</summary>
+    private IProgress<string> UiLog() => new Progress<string>(AddLog);
 
     [RelayCommand]
     private async Task InstallAsync()
@@ -335,7 +345,8 @@ public sealed partial class MainViewModel : ObservableObject
                 IsDevBuild = asset.Kind == AssetKind.Dev,
                 IsExperimental = release.IsExperimental,
             };
-            await Task.Run(() => _installer.Install(game.Win64Path, zip, options, new Progress<string>(AddLog)));
+            var log = UiLog();
+            await Task.Run(() => _installer.Install(game.Win64Path, zip, options, log));
         });
     }
 
@@ -355,7 +366,8 @@ public sealed partial class MainViewModel : ObservableObject
                 AssetName = name,
                 IsDevBuild = Ue4ssRelease.Classify(name) == AssetKind.Dev,
             };
-            await Task.Run(() => _installer.Install(game.Win64Path, zip, options, new Progress<string>(AddLog)));
+            var log = UiLog();
+            await Task.Run(() => _installer.Install(game.Win64Path, zip, options, log));
         });
     }
 
@@ -377,7 +389,8 @@ public sealed partial class MainViewModel : ObservableObject
         await RunBusyAsync(async () =>
         {
             ProgressIndeterminate = true;
-            await Task.Run(() => _installer.Uninstall(game.Win64Path, keepUserData: choice == Choice.Yes, new Progress<string>(AddLog)));
+            var log = UiLog();
+            await Task.Run(() => _installer.Uninstall(game.Win64Path, keepUserData: choice == Choice.Yes, log));
         });
     }
 
