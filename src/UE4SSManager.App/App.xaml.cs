@@ -22,16 +22,28 @@ public partial class App : Application
         base.OnStartup(e);
     }
 
+    private static bool _showingError;
+    private static DateTime _lastErrorBox;
+
     private static void OnUnhandled(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         WriteCrashLog("UI", e.Exception);
         e.Handled = true;
+        // One box at a time, and not for every repeat of the same failure: a message box pumps messages,
+        // which can re-run the failing layout and stack error boxes until the process overflows its stack.
+        if (_showingError || DateTime.Now - _lastErrorBox < TimeSpan.FromSeconds(5)) return;
+        _showingError = true;
         try
         {
             MessageBox.Show($"{e.Exception.Message}\n\nDetails were saved to {CrashLogPath}", "UE4SS Manager",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
         catch { }
+        finally
+        {
+            _showingError = false;
+            _lastErrorBox = DateTime.Now;
+        }
     }
 
     /// <summary>Appends the full exception to %LocalAppData%\UE4SS-Manager\crash.log so crashes can be diagnosed.</summary>
