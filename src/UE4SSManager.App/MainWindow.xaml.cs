@@ -1,6 +1,7 @@
 using System.Collections.Specialized;
 using System.IO;
 using System.Windows;
+using System.Windows.Threading;
 using UE4SSManager.App.Services;
 using UE4SSManager.App.ViewModels;
 
@@ -17,10 +18,16 @@ public partial class MainWindow : Window
         DataContext = _vm;
         SourceInitialized += (_, _) => Native.UseDarkTitleBar(this);
         Loaded += async (_, _) => await _vm.InitializeAsync();
-        // Keep the newest log line in view.
+        // Keep the newest log line in view. Scrolling forces a layout pass, so it must wait until the ListBox
+        // has processed the change itself; doing it inside CollectionChanged makes WPF throw
+        // "ItemsControl is inconsistent with its items source".
         _vm.Log.CollectionChanged += (_, e) =>
         {
-            if (e.Action == NotifyCollectionChangedAction.Add && _vm.Log.Count > 0) LogList.ScrollIntoView(_vm.Log[^1]);
+            if (e.Action != NotifyCollectionChangedAction.Add) return;
+            Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+            {
+                if (_vm.Log.Count > 0) LogList.ScrollIntoView(_vm.Log[^1]);
+            });
         };
     }
 
