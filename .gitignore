@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Source folder, not build output
+!src/UE4SSManager.Core/Releases/
