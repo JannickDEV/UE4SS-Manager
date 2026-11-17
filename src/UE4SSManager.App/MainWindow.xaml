@@ -1,0 +1,405 @@
+<Window x:Class="UE4SSManager.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:UE4SSManager.App.ViewModels"
+        Title="UE4SS Manager" Width="1180" Height="760" MinWidth="940" MinHeight="600"
+        Background="{StaticResource AppBg}" Foreground="{StaticResource Text}"
+        FontFamily="Segoe UI" FontSize="13" WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="26"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1" Padding="16,0">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Rectangle Width="10" Height="10" Fill="{StaticResource AccentHi}" Margin="0,0,10,0"/>
+                    <TextBlock Text="UE4SS MANAGER" FontWeight="Bold" FontSize="15"/>
+                    <TextBlock Text="Installer and mod manager for Unreal Engine games" Foreground="{StaticResource Muted}" Margin="14,1,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+                <Button DockPanel.Dock="Right" Content="Options" Command="{Binding OpenOptionsCommand}" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="310"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Games column -->
+            <DockPanel Grid.Column="0" Background="{StaticResource Surface}">
+                <Border DockPanel.Dock="Top" Style="{StaticResource SectionBar}" BorderThickness="0,0,1,1">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Rescan" Command="{Binding ScanCommand}"/>
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="GAMES"/>
+                    </DockPanel>
+                </Border>
+                <Border DockPanel.Dock="Top" Padding="10" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,1">
+                    <Grid>
+                        <TextBox x:Name="Search" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock Text="Search games" Foreground="{StaticResource Muted}" Margin="8,0" VerticalAlignment="Center" IsHitTestVisible="False">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Text, ElementName=Search}" Value="">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+                <Border DockPanel.Dock="Bottom" Padding="10" BorderBrush="{StaticResource Line}" BorderThickness="0,1,1,0">
+                    <UniformGrid Columns="2">
+                        <Button Content="Add game..." Command="{Binding AddGameCommand}" Margin="0,0,5,0" ToolTip="Pick any exe inside an Unreal Engine game"/>
+                        <Button Content="Remove from list" Command="{Binding RemoveGameCommand}" Margin="5,0,0,0" IsEnabled="{Binding HasGame}"/>
+                    </UniformGrid>
+                </Border>
+                <Border DockPanel.Dock="Bottom" Padding="10,6" BorderBrush="{StaticResource Line}" BorderThickness="0,1,1,0">
+                    <StackPanel>
+                        <ProgressBar IsIndeterminate="True" Visibility="{Binding IsScanning, Converter={StaticResource BoolToVis}}" Margin="0,0,0,6"/>
+                        <TextBlock Text="{Binding GamesSummary}" Style="{StaticResource MutedText}" FontSize="11"/>
+                    </StackPanel>
+                </Border>
+                <Border BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
+                    <ListBox ItemsSource="{Binding GamesView}" SelectedItem="{Binding SelectedGame}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type vm:GameItem}">
+                                <Grid Margin="12,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="36"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Border Width="32" Height="32" Background="{StaticResource Surface2}" BorderBrush="{StaticResource Line}" BorderThickness="1" VerticalAlignment="Center">
+                                        <Grid>
+                                            <TextBlock Text="{Binding Monogram}" FontWeight="Bold" FontSize="11" Foreground="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                            <Image Source="{Binding Icon}" Width="30" Height="30"/>
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Margin="10,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"/>
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Ue4ssBadge}" Foreground="{StaticResource AccentHi}" FontSize="11"/>
+                                            <TextBlock Text="{Binding Meta}" Foreground="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                        </DockPanel>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </DockPanel>
+
+            <!-- Detail column -->
+            <TextBlock Grid.Column="1" Text="Pick a game on the left." Foreground="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding HasGame}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <DockPanel Grid.Column="1" Margin="20,16,20,16" Visibility="{Binding HasGame, Converter={StaticResource BoolToVis}}">
+                <!-- Game banner -->
+                <Border DockPanel.Dock="Top" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1" Padding="14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="64"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Width="64" Height="64" Background="{StaticResource Surface2}" BorderBrush="{StaticResource Line}" BorderThickness="1">
+                            <Grid>
+                                <TextBlock Text="{Binding SelectedGame.Monogram}" FontWeight="Bold" FontSize="20" Foreground="{StaticResource Muted}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <Image Source="{Binding SelectedGame.Icon}" Width="48" Height="48"/>
+                            </Grid>
+                        </Border>
+                        <StackPanel Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding SelectedGame.Name}" FontSize="19" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding SelectedGame.Meta}" Foreground="{StaticResource Muted}" Margin="0,2,0,0"/>
+                            <TextBlock Text="{Binding SelectedGame.Game.Win64Path}" Foreground="{StaticResource Muted}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"
+                                       ToolTip="{Binding SelectedGame.Game.ShippingExePath}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                            <Button Content="Open folder" Command="{Binding OpenGameFolderCommand}" Margin="0,0,8,0"/>
+                            <Button Content="Launch game" Command="{Binding LaunchGameCommand}"/>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- UE4SS status strip -->
+                <Border DockPanel.Dock="Top" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="1,0,1,1" Padding="14,10">
+                    <DockPanel>
+                        <Rectangle Width="10" Height="10" Margin="0,0,10,0" VerticalAlignment="Center">
+                            <Rectangle.Style>
+                                <Style TargetType="Rectangle">
+                                    <Setter Property="Fill" Value="{StaticResource Muted}"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource Good}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding HasWarning}" Value="True">
+                                            <Setter Property="Fill" Value="{StaticResource Warn}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Rectangle.Style>
+                        </Rectangle>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsInstalled, Converter={StaticResource BoolToVis}}">
+                            <Button Style="{StaticResource LinkButton}" Content="UE4SS.log" Command="{Binding OpenLogCommand}" Margin="0,0,14,0"/>
+                            <Button Style="{StaticResource LinkButton}" Content="UE4SS-settings.ini" Command="{Binding OpenSettingsIniCommand}"/>
+                        </StackPanel>
+                        <TextBlock VerticalAlignment="Center">
+                            <Run Text="{Binding StatusHeadline, Mode=OneWay}" FontWeight="SemiBold"/>
+                            <Run Text="   "/>
+                            <Run Text="{Binding StatusDetail, Mode=OneWay}" Foreground="{StaticResource Muted}"/>
+                        </TextBlock>
+                    </DockPanel>
+                </Border>
+
+                <TabControl Margin="0,14,0,0">
+                    <!-- UE4SS tab -->
+                    <TabItem Header="UE4SS">
+                        <Border Style="{StaticResource Group}" BorderThickness="1,0,1,1">
+                            <DockPanel>
+                                <Grid DockPanel.Dock="Top">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="120"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                        <Rectangle Style="{StaticResource Bullet}"/>
+                                        <TextBlock Text="Channel" Style="{StaticResource FieldLabel}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal">
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="Channel" Content="Stable releases" IsChecked="{Binding IsStable}"/>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="Channel" Content="Experimental (latest)" IsChecked="{Binding IsExperimental}"
+                                                     ToolTip="Rolling build from UE4SS's main branch: newest fixes and game support, less tested."/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,12,0,0">
+                                        <Rectangle Style="{StaticResource Bullet}"/>
+                                        <TextBlock Text="Version" Style="{StaticResource FieldLabel}"/>
+                                    </StackPanel>
+                                    <DockPanel Grid.Row="1" Grid.Column="1" Margin="0,12,0,0">
+                                        <Button DockPanel.Dock="Right" Content="Release notes" Command="{Binding OpenReleasePageCommand}" Margin="8,0,0,0"/>
+                                        <Button DockPanel.Dock="Right" Content="Refresh" Command="{Binding LoadReleasesCommand}" Margin="8,0,0,0"/>
+                                        <ComboBox ItemsSource="{Binding VisibleReleases}" SelectedItem="{Binding SelectedRelease}" MaxWidth="420" HorizontalAlignment="Left" MinWidth="300">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type vm:ReleaseOption}">
+                                                    <DockPanel>
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Detail}" Foreground="{StaticResource Muted}" Margin="16,0,0,0"/>
+                                                        <TextBlock Text="{Binding Title}"/>
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </DockPanel>
+
+                                    <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,12,0,0">
+                                        <Rectangle Style="{StaticResource Bullet}"/>
+                                        <TextBlock Text="Build" Style="{StaticResource FieldLabel}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,12,0,0">
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="Build" Content="Normal" IsChecked="{Binding IsNormalBuild}"/>
+                                        <RadioButton Style="{StaticResource Segment}" GroupName="Build" Content="zDEV" IsChecked="{Binding UseDevBuild}" IsEnabled="{Binding DevAvailable}"
+                                                     ToolTip="Developer build: includes debug symbols and the live view / dumper tools for mod makers."/>
+                                        <TextBlock Text="zDEV adds debug symbols and the mod-maker tools." Style="{StaticResource MutedText}" VerticalAlignment="Center" Margin="12,0,0,0"/>
+                                    </StackPanel>
+
+                                    <CheckBox Grid.Row="3" Grid.Column="1" Margin="0,14,0,0" IsChecked="{Binding KeepUserData}"
+                                              Content="Keep my UE4SS settings, mod list and disabled mods when updating"/>
+
+                                    <StackPanel Grid.Row="4" Grid.Column="1" Margin="0,10,0,0">
+                                        <TextBlock Text="{Binding ReleaseInfo}" Style="{StaticResource MutedText}"/>
+                                        <TextBlock Text="{Binding ReleaseNotice}" Foreground="{StaticResource Warn}" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,18,0,0">
+                                    <Button Style="{StaticResource AccentButton}" Content="{Binding InstallButtonText}" Command="{Binding InstallCommand}" MinWidth="150"/>
+                                    <Button Style="{StaticResource DangerButton}" Content="Uninstall" Command="{Binding UninstallCommand}" Margin="8,0,0,0"
+                                            IsEnabled="{Binding IsInstalled}"/>
+                                    <Button Content="Install from zip file..." Command="{Binding InstallFromZipCommand}" Margin="8,0,0,0"
+                                            ToolTip="Install a UE4SS release zip you downloaded yourself"/>
+                                </StackPanel>
+
+                                <ProgressBar DockPanel.Dock="Top" Margin="0,14,0,0" Value="{Binding Progress}" IsIndeterminate="{Binding ProgressIndeterminate}"
+                                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVis}}"/>
+
+                                <Border Margin="0,14,0,0" Background="{StaticResource AppBg}" BorderBrush="{StaticResource Line}" BorderThickness="1" MinHeight="90">
+                                    <ListBox x:Name="LogList" ItemsSource="{Binding Log}" FontFamily="{StaticResource Mono}" FontSize="12" Padding="6">
+                                        <ListBox.ItemContainerStyle>
+                                            <Style TargetType="ListBoxItem">
+                                                <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="ListBoxItem">
+                                                            <TextBlock Text="{Binding}" TextWrapping="Wrap" Margin="0,1"/>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                            </Style>
+                                        </ListBox.ItemContainerStyle>
+                                    </ListBox>
+                                </Border>
+                            </DockPanel>
+                        </Border>
+                    </TabItem>
+
+                    <!-- Mods tab -->
+                    <TabItem Header="Mods">
+                        <Border x:Name="ModsDrop" Style="{StaticResource Group}" BorderThickness="1,0,1,1" Padding="0" AllowDrop="True"
+                                Drop="OnModsDrop" DragOver="OnModsDragOver">
+                            <DockPanel>
+                                <Border DockPanel.Dock="Top" Padding="14,12" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+                                    <DockPanel>
+                                        <TextBlock DockPanel.Dock="Right" Text="{Binding ModsSummary}" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Style="{StaticResource AccentButton}" Content="Install mod from zip..." Command="{Binding InstallModZipCommand}"/>
+                                            <Button Content="Install mod folder..." Command="{Binding InstallModFolderCommand}" Margin="8,0,0,0"/>
+                                            <Button Content="Open Mods folder" Command="{Binding OpenModsFolderCommand}" Margin="8,0,0,0"/>
+                                            <Button Content="Refresh" Command="{Binding RefreshModsCommand}" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </DockPanel>
+                                </Border>
+                                <Border DockPanel.Dock="Top" Padding="14,8" Background="{StaticResource Surface2}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsInstalled}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Foreground="{StaticResource Warn}" TextWrapping="Wrap"
+                                               Text="UE4SS isn't installed in this game yet. Mods added here go into ue4ss\Mods and load once UE4SS is installed."/>
+                                </Border>
+                                <Border DockPanel.Dock="Bottom" Padding="14,8" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0">
+                                    <TextBlock Style="{StaticResource MutedText}"
+                                               Text="Drop .zip files or mod folders anywhere here to install them. Lua mods need Scripts\main.lua, C++ mods need dlls\main.dll."/>
+                                </Border>
+                                <!-- Column header -->
+                                <Grid DockPanel.Dock="Top" Background="{StaticResource HeaderBar}" Height="28">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="56"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                        <ColumnDefinition Width="130"/>
+                                        <ColumnDefinition Width="150"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="ON" Style="{StaticResource SectionLabel}" Margin="16,0,0,0"/>
+                                    <TextBlock Grid.Column="1" Text="MOD" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Grid.Column="2" Text="TYPE" Style="{StaticResource SectionLabel}"/>
+                                    <TextBlock Grid.Column="3" Text="LOADED BY" Style="{StaticResource SectionLabel}"/>
+                                </Grid>
+                                <ListBox ItemsSource="{Binding Mods}" ItemContainerStyle="{StaticResource PlainRow}">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type vm:ModItem}">
+                                            <Grid Height="36">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="56"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="130"/>
+                                                    <ColumnDefinition Width="150"/>
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox IsChecked="{Binding IsEnabled}" Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                    <Border Margin="8,0,0,0" Padding="5,0" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                                                            Visibility="{Binding IsBuiltIn, Converter={StaticResource BoolToVis}}">
+                                                        <TextBlock Text="built-in" FontSize="10" Foreground="{StaticResource Muted}"/>
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" Text="{Binding Kind}" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="3" Text="{Binding EnabledVia}" Foreground="{StaticResource Muted}" VerticalAlignment="Center"/>
+                                                <StackPanel Grid.Column="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,12,0">
+                                                    <Button Style="{StaticResource SmallButton}" Content="Folder"
+                                                            Command="{Binding DataContext.OpenModFolderCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
+                                                    <Button Style="{StaticResource SmallButton}" Content="Delete" Margin="6,0,0,0" BorderBrush="{StaticResource Danger}"
+                                                            Command="{Binding DataContext.DeleteModCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                            </DockPanel>
+                        </Border>
+                    </TabItem>
+
+                    <!-- UE4SS settings tab -->
+                    <TabItem Header="UE4SS Settings">
+                        <Border Style="{StaticResource Group}" BorderThickness="1,0,1,1">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource MutedText}" Margin="0,0,0,14"
+                                           Text="Common switches from UE4SS-settings.ini. Changes are saved right away and apply the next time the game starts."/>
+                                <TextBlock Foreground="{StaticResource Warn}" Margin="0,0,0,14" Text="Install UE4SS first, this game has no UE4SS-settings.ini yet.">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasSettingsFile}" Value="True">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                                <StackPanel IsEnabled="{Binding HasSettingsFile}">
+                                    <Border Style="{StaticResource SectionBar}">
+                                        <TextBlock Style="{StaticResource SectionLabel}" Text="CONSOLE"/>
+                                    </Border>
+                                    <Border Style="{StaticResource Group}">
+                                        <StackPanel>
+                                            <CheckBox Content="Console window (ConsoleEnabled)" IsChecked="{Binding ConsoleEnabled}"/>
+                                            <CheckBox Content="GUI console / live view (GuiConsoleEnabled)" IsChecked="{Binding GuiConsoleEnabled}" Margin="0,10,0,0"/>
+                                            <CheckBox Content="Show the GUI console on start (GuiConsoleVisible)" IsChecked="{Binding GuiConsoleVisible}" Margin="0,10,0,0"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                                                <TextBlock Text="GUI console renderer (GraphicsAPI)" Style="{StaticResource FieldLabel}"/>
+                                                <ComboBox ItemsSource="{Binding GraphicsApis}" SelectedItem="{Binding GraphicsApi}" Width="120"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                    <Border Style="{StaticResource SectionBar}" Margin="0,14,0,0">
+                                        <TextBlock Style="{StaticResource SectionLabel}" Text="MOD MAKING"/>
+                                    </Border>
+                                    <Border Style="{StaticResource Group}">
+                                        <CheckBox Content="Hot reload Lua mods with Ctrl+R (EnableHotReloadSystem)" IsChecked="{Binding HotReload}"/>
+                                    </Border>
+                                    <Button Content="Open the full UE4SS-settings.ini" Command="{Binding OpenSettingsIniCommand}" HorizontalAlignment="Left" Margin="0,16,0,0"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </TabItem>
+                </TabControl>
+            </DockPanel>
+        </Grid>
+
+        <!-- Status bar -->
+        <Border Grid.Row="2" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="0,1,0,0" Padding="16,0">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding AppVersion}" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
+                <TextBlock Text="UE4SS by the UE4SS-RE team  ·  github.com/UE4SS-RE/RE-UE4SS" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
