@@ -134,6 +134,22 @@ public class InstallerTests
     }
 
     [Fact]
+    public void Updating_a_hand_made_install_keeps_game_specific_files()
+    {
+        using var t = new TempDir();
+        var win64 = Win64(t);
+        t.File("Game/Proj/Binaries/Win64/dwmapi.dll", "old proxy");
+        t.File("Game/Proj/Binaries/Win64/ue4ss/UE4SS.dll", "old");
+        t.File("Game/Proj/Binaries/Win64/ue4ss/MemberVariableLayout.ini", "layout");
+        t.File("Game/Proj/Binaries/Win64/ue4ss/UE4SS_Signatures/FName_Constructor.lua", "sig");
+        var result = new Ue4ssInstaller(new FakeVersionReader()).Install(win64, Zips.V3(t.Combine("dl/a.zip")), new InstallOptions { Version = "3.0.1" });
+        Assert.Equal("3.0.1", result.Status.Version);
+        Assert.Equal("ue4ss 3.0.1", File.ReadAllText(Path.Combine(win64, "ue4ss", "UE4SS.dll")));
+        Assert.True(File.Exists(Path.Combine(win64, "ue4ss", "MemberVariableLayout.ini")));
+        Assert.True(File.Exists(Path.Combine(win64, "ue4ss", "UE4SS_Signatures", "FName_Constructor.lua")));
+    }
+
+    [Fact]
     public void Version_comes_from_dll_when_installed_by_hand()
     {
         using var t = new TempDir();
