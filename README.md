@@ -13,6 +13,7 @@ One self-contained `UE4SS-Manager.exe` for Windows 10/11, no .NET install needed
 - Add any game by hand by picking its exe
 - A game counts as Unreal when it has `<Project>\Binaries\Win64\*-Shipping.exe` (WinGDK for Game Pass builds), even when the project sits a few folders deep
 - Shows the engine version from the exe and whether UE4SS is installed
+- Right-click a game to hide it. Hidden games have no section of their own: press Ctrl+H in the window to switch the list to them (and back), where right-click > Unhide brings one back
 
 **Installs UE4SS**
 - Stable releases or the rolling `experimental-latest` build, straight from GitHub

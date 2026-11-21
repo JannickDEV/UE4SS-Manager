@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace UE4SSManager.Core;
 
@@ -9,11 +10,31 @@ public sealed class AppSettings
     public List<string> LibraryFolders { get; set; } = [];
     /// <summary>Games added by hand (any folder or exe inside the game).</summary>
     public List<string> ManualGames { get; set; } = [];
-    /// <summary>Detected games the user removed from the list.</summary>
+    /// <summary>Detected games the user removed from the list (by <c>GameInstall.Key</c>). Stored as "HiddenGames"
+    /// because that is what older versions called it.</summary>
+    [JsonPropertyName("HiddenGames")]
+    public List<string> RemovedGames { get; set; } = [];
+    /// <summary>Games the user hid (by <c>GameInstall.Key</c>). They stay installed and managed, but only show up in
+    /// the hidden view (Ctrl+H in the games list).</summary>
+    [JsonPropertyName("Tucked")]
     public List<string> HiddenGames { get; set; } = [];
     public string Repository { get; set; } = Releases.ReleaseClient.DefaultRepository;
     public string? GitHubToken { get; set; }
     public string? LastGame { get; set; }
+
+    public bool IsHidden(string key) => HiddenGames.Contains(key, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Hides or unhides a game. Returns true when something changed.</summary>
+    public bool SetHidden(string key, bool hidden)
+    {
+        if (hidden)
+        {
+            if (IsHidden(key)) return false;
+            HiddenGames.Add(key);
+            return true;
+        }
+        return HiddenGames.RemoveAll(h => string.Equals(h, key, StringComparison.OrdinalIgnoreCase)) > 0;
+    }
 
     public static string AppDataDir => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "UE4SS-Manager");
