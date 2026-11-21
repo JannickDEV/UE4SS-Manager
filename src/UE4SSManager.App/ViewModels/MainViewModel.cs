@@ -34,8 +34,8 @@ public sealed partial class MainViewModel : ObservableObject
         _settings = AppSettings.Load();
         _releases = CreateReleaseClient();
         GamesView = CollectionViewSource.GetDefaultView(Games);
-        GamesView.Filter = o => string.IsNullOrWhiteSpace(SearchText) ||
-                                ((GameItem)o).Name.Contains(SearchText, StringComparison.CurrentCultureIgnoreCase);
+        GamesView.Filter = o => o is GameItem g && g.IsHidden == ShowHiddenGames &&
+                                (string.IsNullOrWhiteSpace(SearchText) || g.Name.Contains(SearchText, StringComparison.CurrentCultureIgnoreCase));
     }
 
     private ReleaseClient CreateReleaseClient() =>
@@ -56,6 +56,67 @@ public sealed partial class MainViewModel : ObservableObject
 
     [ObservableProperty] private bool _isScanning;
     [ObservableProperty] private string _gamesSummary = "";
+
+    /// <summary>The hidden view: the list shows only hidden games instead of the normal ones. Reached with Ctrl+H
+    /// and never saved, so the app always starts on the normal list.</summary>
+    [ObservableProperty] private bool _showHiddenGames;
+    public string GamesHeader => ShowHiddenGames ? "HIDDEN GAMES" : "GAMES";
+
+    partial void OnShowHiddenGamesChanged(bool value)
+    {
+        OnPropertyChanged(nameof(GamesHeader));
+        RefreshGamesView();
+    }
+
+    [RelayCommand] private void ToggleHiddenGames() => ShowHiddenGames = !ShowHiddenGames;
+
+    [RelayCommand]
+    private void HideGame()
+    {
+        if (SelectedGame is not { } item || item.IsHidden) return;
+        _settings.SetHidden(item.Game.Key, true);
+        TrySaveSettings();
+        item.IsHidden = true;
+        RefreshGamesView();
+    }
+
+    [RelayCommand]
+    private void UnhideGame()
+    {
+        if (SelectedGame is not { } item || !item.IsHidden) return;
+        _settings.SetHidden(item.Game.Key, false);
+        TrySaveSettings();
+        item.IsHidden = false;
+        RefreshGamesView();
+    }
+
+    /// <summary>Re-filters the list, moves the selection off a game that is no longer shown and updates the summary.</summary>
+    private void RefreshGamesView()
+    {
+        var keep = SelectedGame;
+        GamesView.Refresh();
+        if (keep is null || !GamesView.Filter(keep))
+            SelectedGame = GamesView.Cast<GameItem>().FirstOrDefault();
+        UpdateGamesSummary();
+    }
+
+    private void UpdateGamesSummary()
+    {
+        if (IsScanning) return;
+        if (ShowHiddenGames)
+        {
+            var hidden = Games.Count(g => g.IsHidden);
+            GamesSummary = hidden == 0
+                ? "No hidden games. Right-click a game to hide it.  ·  Ctrl+H to go back"
+                : $"{hidden} hidden games  ·  Ctrl+H to go back";
+            return;
+        }
+        var shown = Games.Where(g => !g.IsHidden).ToList();
+        var withUe4ss = shown.Count(g => g.Status?.IsInstalled == true);
+        GamesSummary = shown.Count == 0
+            ? "No Unreal Engine games found. Use Add game, or add a library folder in Options."
+            : $"{shown.Count} games  ·  {withUe4ss} with UE4SS";
+    }
 
     partial void OnSelectedGameChanged(GameItem? value)
     {
@@ -83,17 +144,16 @@ public sealed partial class MainViewModel : ObservableObject
         {
             var detector = GameDetector.CreateDefault(_settings.LibraryFolders);
             var found = await detector.DetectAsync(_settings.ManualGames);
-            var hidden = new HashSet<string>(_settings.HiddenGames, StringComparer.OrdinalIgnoreCase);
+            var removed = new HashSet<string>(_settings.RemovedGames, StringComparer.OrdinalIgnoreCase);
             var keep = SelectedGame?.Game.Key ?? _settings.LastGame;
-            var items = await Task.Run(() => found.Where(g => !hidden.Contains(g.Key))
-                .Select(g => { var i = new GameItem(g); i.Status = Ue4ssDetector.Detect(g.Win64Path); return i; }).ToList());
+            var items = await Task.Run(() => found.Where(g => !removed.Contains(g.Key))
+                .Select(g => new GameItem(g) { Status = Ue4ssDetector.Detect(g.Win64Path), IsHidden = _settings.IsHidden(g.Key) }).ToList());
             Games.Clear();
             foreach (var i in items) Games.Add(i);
-            SelectedGame = Games.FirstOrDefault(g => g.Game.Key == keep) ?? Games.FirstOrDefault();
-            var withUe4ss = Games.Count(g => g.Status?.IsInstalled == true);
-            GamesSummary = Games.Count == 0
-                ? "No Unreal Engine games found. Use Add game, or add a library folder in Options."
-                : $"{Games.Count} games  ·  {withUe4ss} with UE4SS";
+            var visible = GamesView.Cast<GameItem>().ToList();
+            SelectedGame = visible.FirstOrDefault(g => g.Game.Key == keep) ?? visible.FirstOrDefault();
+            IsScanning = false;
+            UpdateGamesSummary();
         }
         catch (Exception e)
         {
@@ -116,7 +176,9 @@ public sealed partial class MainViewModel : ObservableObject
         }
         foreach (var g in found)
         {
-            _settings.HiddenGames.RemoveAll(h => string.Equals(h, g.Key, StringComparison.OrdinalIgnoreCase));
+            _settings.RemovedGames.RemoveAll(h => string.Equals(h, g.Key, StringComparison.OrdinalIgnoreCase));
+            // Adding a hidden game by hand means the user wants it back: unhide it.
+            _settings.SetHidden(g.Key, false);
             if (!_settings.ManualGames.Contains(g.ShippingExePath, StringComparer.OrdinalIgnoreCase))
                 _settings.ManualGames.Add(g.ShippingExePath);
             var existing = Games.FirstOrDefault(x => x.Game.Key == g.Key);
@@ -125,9 +187,13 @@ public sealed partial class MainViewModel : ObservableObject
                 existing = new GameItem(g) { Status = Ue4ssDetector.Detect(g.Win64Path) };
                 Games.Add(existing);
             }
+            existing.IsHidden = false;
+            if (ShowHiddenGames) ShowHiddenGames = false;
+            GamesView.Refresh();
             SelectedGame = existing;
         }
         TrySaveSettings();
+        UpdateGamesSummary();
     }
 
     [RelayCommand]
@@ -137,11 +203,12 @@ public sealed partial class MainViewModel : ObservableObject
         if (!_dialogs.Confirm($"Remove {item.Name} from the list? Nothing is deleted from disk. You can bring it back in Options."))
             return;
         _settings.ManualGames.RemoveAll(p => string.Equals(p, item.Game.ShippingExePath, StringComparison.OrdinalIgnoreCase));
-        if (item.Game.Source != GameSource.Manual && !_settings.HiddenGames.Contains(item.Game.Key))
-            _settings.HiddenGames.Add(item.Game.Key);
+        if (item.Game.Source != GameSource.Manual && !_settings.RemovedGames.Contains(item.Game.Key, StringComparer.OrdinalIgnoreCase))
+            _settings.RemovedGames.Add(item.Game.Key);
+        _settings.SetHidden(item.Game.Key, false);
         TrySaveSettings();
         Games.Remove(item);
-        SelectedGame = Games.FirstOrDefault();
+        RefreshGamesView();
     }
 
     [RelayCommand]

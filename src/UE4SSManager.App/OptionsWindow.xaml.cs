@@ -19,7 +19,7 @@ public partial class OptionsWindow : Window
         foreach (var f in settings.LibraryFolders) Folders.Items.Add(f);
         Repo.Text = settings.Repository;
         Token.Text = settings.GitHubToken ?? "";
-        HiddenText.Text = settings.HiddenGames.Count == 0 ? "No hidden games." : $"{settings.HiddenGames.Count} games are hidden from the list.";
+        RemovedText.Text = settings.RemovedGames.Count == 0 ? "No games removed from the list." : $"{settings.RemovedGames.Count} games removed from the list.";
     }
 
     private void OnAddFolder(object sender, RoutedEventArgs e)
@@ -36,7 +36,7 @@ public partial class OptionsWindow : Window
     private void OnUnhide(object sender, RoutedEventArgs e)
     {
         _unhide = true;
-        HiddenText.Text = "All games will show again after saving.";
+        RemovedText.Text = "Removed games come back after saving.";
     }
 
     private void OnOpenCache(object sender, RoutedEventArgs e)
@@ -56,7 +56,7 @@ public partial class OptionsWindow : Window
         _settings.LibraryFolders = Folders.Items.Cast<string>().ToList();
         _settings.Repository = string.IsNullOrWhiteSpace(Repo.Text) ? ReleaseClient.DefaultRepository : Repo.Text.Trim();
         _settings.GitHubToken = string.IsNullOrWhiteSpace(Token.Text) ? null : Token.Text.Trim();
-        if (_unhide) _settings.HiddenGames.Clear();
+        if (_unhide) _settings.RemovedGames.Clear();
         DialogResult = true;
     }
 }
