@@ -6,6 +6,10 @@
         Background="{StaticResource AppBg}" Foreground="{StaticResource Text}"
         FontFamily="Segoe UI" FontSize="13" WindowStartupLocation="CenterScreen"
         UseLayoutRounding="True" SnapsToDevicePixels="True" TextOptions.TextFormattingMode="Display">
+    <Window.InputBindings>
+        <!-- Hidden games view. Deliberately has no button: Ctrl+H swaps the list to the hidden games and back. -->
+        <KeyBinding Key="H" Modifiers="Control" Command="{Binding ToggleHiddenGamesCommand}"/>
+    </Window.InputBindings>
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="52"/>
@@ -36,7 +40,7 @@
                 <Border DockPanel.Dock="Top" Style="{StaticResource SectionBar}" BorderThickness="0,0,1,1">
                     <DockPanel>
                         <Button DockPanel.Dock="Right" Style="{StaticResource LinkButton}" Content="Rescan" Command="{Binding ScanCommand}"/>
-                        <TextBlock Style="{StaticResource SectionLabel}" Text="GAMES"/>
+                        <TextBlock Style="{StaticResource SectionLabel}" Text="{Binding GamesHeader}"/>
                     </DockPanel>
                 </Border>
                 <Border DockPanel.Dock="Top" Padding="10" BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,1">
@@ -70,6 +74,18 @@
                 </Border>
                 <Border BorderBrush="{StaticResource Line}" BorderThickness="0,0,1,0">
                     <ListBox ItemsSource="{Binding GamesView}" SelectedItem="{Binding SelectedGame}">
+                        <ListBox.ContextMenu>
+                            <!-- Right-clicking a row selects it first, so these act on SelectedGame. -->
+                            <ContextMenu>
+                                <MenuItem Header="Hide game" Command="{Binding HideGameCommand}"
+                                          Visibility="{Binding ShowHiddenGames, Converter={StaticResource InvBoolToVis}}"/>
+                                <MenuItem Header="Unhide game" Command="{Binding UnhideGameCommand}"
+                                          Visibility="{Binding ShowHiddenGames, Converter={StaticResource BoolToVis}}"/>
+                                <MenuItem Header="Open folder" Command="{Binding OpenGameFolderCommand}"/>
+                                <Separator/>
+                                <MenuItem Header="Remove from list" Command="{Binding RemoveGameCommand}"/>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:GameItem}">
                                 <Grid Margin="12,8">

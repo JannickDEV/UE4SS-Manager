@@ -29,12 +29,12 @@
                 </Border>
 
                 <Border Style="{StaticResource SectionBar}" Margin="0,14,0,0">
-                    <TextBlock Style="{StaticResource SectionLabel}" Text="HIDDEN GAMES"/>
+                    <TextBlock Style="{StaticResource SectionLabel}" Text="REMOVED GAMES"/>
                 </Border>
                 <Border Style="{StaticResource Group}">
                     <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Show all again" Click="OnUnhide"/>
-                        <TextBlock x:Name="HiddenText" Style="{StaticResource MutedText}" VerticalAlignment="Center"/>
+                        <Button DockPanel.Dock="Right" Content="Bring them back" Click="OnUnhide"/>
+                        <TextBlock x:Name="RemovedText" Style="{StaticResource MutedText}" VerticalAlignment="Center"/>
                     </DockPanel>
                 </Border>
 

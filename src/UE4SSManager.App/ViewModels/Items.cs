@@ -32,6 +32,7 @@ public sealed partial class GameItem : ObservableObject
     public string Meta => string.Join("  ·  ", new[] { SourceLabel, Game.EngineVersion is null ? null : "UE " + Game.EngineVersion }.Where(s => s is not null));
 
     [ObservableProperty] private Ue4ssStatus? _status;
+    [ObservableProperty] private bool _isHidden;
 
     public string Ue4ssBadge => Status switch
     {
